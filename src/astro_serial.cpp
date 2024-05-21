@@ -9,6 +9,7 @@
 
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
+#include "geometry_msgs/msg/twist.hpp"
 
 using namespace LibSerial;
 using namespace std::chrono_literals;
@@ -36,6 +37,8 @@ public:
 
     joint_states_publisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 10);
     publisher_timer_ = this->create_wall_timer(20ms, std::bind(&AstroSerialNode::timer_callback, this));
+  
+    cmd_vel_subscriber_ = this->create_subscription<geometry_msgs::msg::Twist>("cmd_vel", 10, std::bind(&AstroSerialNode::cmd_vel_callback, this, std::placeholders::_1));
   }
 
   ~AstroSerialNode()
@@ -120,13 +123,64 @@ private:
     return tokens;
   }
 
-  rclcpp::TimerBase::SharedPtr publisher_timer_;
+  double clamp_symetric(double value, double max_abs)
+  {
+    if(value > max_abs)
+    {
+      value = max_abs;
+    }
+    else if (value < -max_abs)
+    {
+      value = -max_abs;
+    }
 
-  std::vector<std::string> raw_joint_states;
+    return value;
+  }
+
+  std::vector<double> diff_drive_inv_kinematics(geometry_msgs::msg::Twist twist_msg)
+  {
+    std::vector<double> w = {0, 0};
+    w.at(0) = clamp_symetric((twist_msg.linear.x / wheelRadius) - 0.5 * twist_msg.angular.z * (wheelSeparation / wheelRadius), maxWheelAngularVelocity);
+    w.at(1) = clamp_symetric((twist_msg.linear.x / wheelRadius) + 0.5 * twist_msg.angular.z * (wheelSeparation / wheelRadius), maxWheelAngularVelocity);
+  
+    return w;
+  }
+
+  void send_velocity(std::vector<double> w)
+  {
+    try
+    {
+      std::string velcity_command = "v " + std::to_string(w.at(0)) + " " + std::to_string(w.at(1)) + "\n";
+      serial_conn_.Write(velcity_command);
+    }
+    catch(const NotOpen&)
+    {
+      RCLCPP_ERROR(this->get_logger(), "UART port is not opened");
+    }
+    catch(const std::exception& e)
+    {
+      RCLCPP_ERROR(this->get_logger(), "Error writing to UART: %s", e.what());
+    }
+  }
+
+  void cmd_vel_callback(const geometry_msgs::msg::Twist & msg)
+  {
+    std::vector<double> w = diff_drive_inv_kinematics(msg);
+    send_velocity(w);
+  }
+  
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_states_publisher_;
+  rclcpp::TimerBase::SharedPtr publisher_timer_;
   rclcpp::PublisherOptions pub_options_;
 
+  rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_subscriber_;
+  const double wheelRadius = 0.036;
+  const double wheelSeparation = 0.304;
+  const double maxWheelAngularVelocity = 20.9;
+
   SerialPort serial_conn_;
+
+  std::vector<std::string> raw_joint_states;
 
   std::thread uart_thread_;
   std::atomic<bool> uart_thread_running_;
