@@ -10,6 +10,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
+find_package(std_srvs REQUIRED)
 
 # uncomment the following section in order to fill in
 # further dependencies manually.
@@ -21,6 +22,7 @@ ament_target_dependencies(
   rclcpp
   sensor_msgs
   geometry_msgs
+  std_srvs
   )
 target_link_libraries(astro_serial PUBLIC serial)
 

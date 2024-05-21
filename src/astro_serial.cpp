@@ -10,6 +10,8 @@
 #include "rclcpp/rclcpp.hpp"
 #include "sensor_msgs/msg/joint_state.hpp"
 #include "geometry_msgs/msg/twist.hpp"
+#include "std_msgs/msg/float32.hpp"
+#include "std_srvs/srv/empty.hpp"
 
 using namespace LibSerial;
 using namespace std::chrono_literals;
@@ -36,6 +38,7 @@ public:
     }
 
     joint_states_publisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 10);
+    current_publisher_ = this->create_publisher<std_msgs::msg::Float32>("/current", 10);
     publisher_timer_ = this->create_wall_timer(20ms, std::bind(&AstroSerialNode::timer_callback, this));
   
     cmd_vel_subscriber_ = this->create_subscription<geometry_msgs::msg::Twist>("cmd_vel", 10, std::bind(&AstroSerialNode::cmd_vel_callback, this, std::placeholders::_1));
@@ -61,6 +64,7 @@ private:
   void publish_joint_states()
   {
     auto joint_states_msg = sensor_msgs::msg::JointState();
+    auto current_msg = std_msgs::msg::Float32();
 
     joint_states_msg.header.frame_id = "base_link";
     joint_states_msg.header.stamp.sec = rclcpp::Clock{}.now().seconds();
@@ -73,6 +77,10 @@ private:
     joint_states_msg.effort = {std::stod(raw_joint_states.at(4)), std::stod(raw_joint_states.at(5))};
 
     joint_states_publisher_->publish(joint_states_msg);
+
+    current_msg.data = std::stof(raw_joint_states.at(6));
+
+    current_publisher_->publish(current_msg);
   }
 
   void timer_callback()
@@ -170,6 +178,7 @@ private:
   }
   
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_states_publisher_;
+  rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr current_publisher_;
   rclcpp::TimerBase::SharedPtr publisher_timer_;
   rclcpp::PublisherOptions pub_options_;
 
