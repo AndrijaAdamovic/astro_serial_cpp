@@ -11,10 +11,5 @@
         "/home/andrija/andrija_ws/install/astro_hardware/lib/python3.10/site-packages",
         "/opt/ros/humble/lib/python3.10/site-packages",
         "/opt/ros/humble/local/lib/python3.10/dist-packages"
-    ],
-    "files.associations": {
-        "*.xacro": "xml",
-        "*.asm": "wat",
-        "string": "cpp"
-    }
+    ]
 }
