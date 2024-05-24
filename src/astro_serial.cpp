@@ -140,7 +140,7 @@ private:
 
   void publish_odometry(bool reset = false)
   {
-    odom_current_time_ = this->get_clock()->now().seconds();
+    odom_current_time_ = this->get_clock()->now().nanoseconds() / 1e9;
 
     double wL = std::stod(raw_joint_states.at(2));
     double wR = std::stod(raw_joint_states.at(3));
