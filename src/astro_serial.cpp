@@ -52,10 +52,6 @@ public:
       rclcpp::shutdown();
     }
 
-    joint_states_msg_.header.frame_id = "base_link";
-
-    joint_states_msg_.name = {"left_wheel_joint", "right_wheel_joint"};
-
     joint_states_publisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 10);
     current_publisher_ = this->create_publisher<std_msgs::msg::Float32>("/absoulte_current", 10);
 
@@ -123,8 +119,13 @@ private:
 
   void publish_joint_states()
   {
+    sensor_msgs::msg::JointState joint_states_msg_;
+    std_msgs::msg::Float32 current_msg_;
 
+    joint_states_msg_.header.frame_id = "base_link";
     joint_states_msg_.header.stamp = this->get_clock()->now();
+
+    joint_states_msg_.name = {"left_wheel_joint", "right_wheel_joint"};
 
     joint_states_msg_.position = {std::stod(raw_joint_states.at(0)), std::stod(raw_joint_states.at(1))};
     joint_states_msg_.velocity = {std::stod(raw_joint_states.at(2)), std::stod(raw_joint_states.at(3))};
@@ -137,30 +138,24 @@ private:
     current_publisher_->publish(current_msg_);
   }
 
-  std::vector<double> quaternion_from_euler(double roll, double pitch, double yaw) 
+  geometry_msgs::msg::Quaternion toQuaternion(double roll, double pitch, double yaw)
   {
-      double cy = std::cos(yaw * 0.5);
-      double sy = std::sin(yaw * 0.5);
-      double cp = std::cos(pitch * 0.5);
-      double sp = std::sin(pitch * 0.5);
-      double cr = std::cos(roll * 0.5);
-      double sr = std::sin(roll * 0.5);
-
-      std::vector<double> q(4);
-      q[0] = cy * cp * cr + sy * sp * sr;
-      q[1] = cy * cp * sr - sy * sp * cr;
-      q[2] = sy * cp * sr + cy * sp * cr;
-      q[3] = sy * cp * cr - cy * sp * sr;
-
-      return q;
+      tf2::Quaternion q;
+      q.setRPY(roll, pitch, yaw);
+      geometry_msgs::msg::Quaternion quaternion_msg;
+      quaternion_msg.x = q.x();
+      quaternion_msg.y = q.y();
+      quaternion_msg.z = q.z();
+      quaternion_msg.w = q.w();
+      return quaternion_msg;
   }
 
   void publish_odometry()
   {
     auto odom_current_time_ = this->get_clock()->now();
 
-    double wL = joint_states_msg_.velocity.at(0);
-    double wR = joint_states_msg_.velocity.at(1);
+    double wL = std::stod(raw_joint_states.at(2));
+    double wR = std::stod(raw_joint_states.at(3));
 
     double velX = (this->get_parameter("wheel_radius").as_double() / 2) * (wL + wR);
     double velY = 0;
@@ -168,14 +163,12 @@ private:
 
     double dt = (odom_current_time_.seconds() - odom_last_time_);
     double delta_x = (velX * std::cos(odom_th_)) * dt;
-    double delta_y = (velY * std::sin(odom_th_)) * dt;
+    double delta_y = (velX * std::sin(odom_th_)) * dt;
     double delta_th = velTh * dt;
 
     odom_x_ += delta_x;
     odom_y_ += delta_y;
     odom_th_ += delta_th;
-    RCLCPP_INFO(this->get_logger(), "Vel x%f y%f th%f Pos x%f y%f th%f", velX, velY, velTh, odom_x_, odom_y_, odom_th_);
-    auto quat = quaternion_from_euler(0, 0, odom_th_);
 
     odom_msg_.header.stamp = odom_current_time_;
     odom_msg_.header.frame_id = "odom";
@@ -184,10 +177,7 @@ private:
     odom_msg_.pose.pose.position.x = odom_x_;
     odom_msg_.pose.pose.position.y = odom_y_;
     odom_msg_.pose.pose.position.z = 0.0;
-    odom_msg_.pose.pose.orientation.x = quat[1];
-    odom_msg_.pose.pose.orientation.y = quat[2];
-    odom_msg_.pose.pose.orientation.z = quat[3];
-    odom_msg_.pose.pose.orientation.w = quat[0];
+    odom_msg_.pose.pose.orientation = toQuaternion(0, 0, odom_th_);
 
     odom_msg_.twist.twist.linear.x = velX;
     odom_msg_.twist.twist.linear.y = velY;
@@ -347,8 +337,6 @@ private:
   SerialPort serial_conn_;
 
   std::vector<std::string> raw_joint_states;
-  sensor_msgs::msg::JointState joint_states_msg_;
-  std_msgs::msg::Float32 current_msg_;
 
   nav_msgs::msg::Odometry odom_msg_;
   double odom_last_time_;
