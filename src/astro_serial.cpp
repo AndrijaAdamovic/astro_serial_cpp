@@ -149,7 +149,7 @@ private:
       quaternion_msg.w = q.w();
       return quaternion_msg;
   }
-
+// 
   void publish_odometry()
   {
     odom_current_time_ = this->get_clock()->now().nanoseconds() / 1e9;
