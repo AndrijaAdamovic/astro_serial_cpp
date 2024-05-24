@@ -160,7 +160,7 @@ private:
     double velY = 0;
     double velTh = ((this->get_parameter("wheel_radius").as_double()) / (this->get_parameter("wheel_separation").as_double())) * (wR - wL);
 
-    double dt = (odom_current_time_ - odom_last_time_).seconds();
+    double dt = (odom_current_time_.seconds() - odom_last_time_);
     double delta_x = (velX * std::cos(odom_th_)) * dt;
     double delta_y = (velY * std::sin(odom_th_)) * dt;
     double delta_th = velTh * dt;
@@ -195,10 +195,9 @@ private:
     odom_trans.transform.rotation = odom_msg_.pose.pose.orientation;
 
     if ((this->get_parameter("publish_odom_tf").as_bool()))
-    {
-      odom_tf_broadcaster_->sendTransform(odom_trans);toQuaternion(0, 0, odom_th_);
-    }
-    odom_last_time_ = odom_current_time_;
+      odom_tf_broadcaster_->sendTransform(odom_trans);
+      
+    odom_last_time_ = odom_current_time_.seconds();
   }
 
   void reset_odometry(const std::shared_ptr<std_srvs::srv::Trigger::Request> request, std::shared_ptr<std_srvs::srv::Trigger::Response> response)
@@ -341,7 +340,7 @@ private:
   std_msgs::msg::Float32 current_msg_;
 
   nav_msgs::msg::Odometry odom_msg_;
-  rclcpp::Time odom_last_time_;
+  double odom_last_time_;
   double odom_x_, odom_y_, odom_th_;
 
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_publisher_;
