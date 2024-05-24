@@ -137,16 +137,22 @@ private:
     current_publisher_->publish(current_msg_);
   }
 
-  geometry_msgs::msg::Quaternion toQuaternion(double roll, double pitch, double yaw)
+  std::vector<double> quaternion_from_euler(double roll, double pitch, double yaw) 
   {
-      tf2::Quaternion q;
-      q.setRPY(roll, pitch, yaw);
-      geometry_msgs::msg::Quaternion quaternion_msg;
-      quaternion_msg.x = q.x();
-      quaternion_msg.y = q.y();
-      quaternion_msg.z = q.z();
-      quaternion_msg.w = q.w();
-      return quaternion_msg;
+      double cy = std::cos(yaw * 0.5);
+      double sy = std::sin(yaw * 0.5);
+      double cp = std::cos(pitch * 0.5);
+      double sp = std::sin(pitch * 0.5);
+      double cr = std::cos(roll * 0.5);
+      double sr = std::sin(roll * 0.5);
+
+      std::vector<double> q(4);
+      q[0] = cy * cp * cr + sy * sp * sr;
+      q[1] = cy * cp * sr - sy * sp * cr;
+      q[2] = sy * cp * sr + cy * sp * cr;
+      q[3] = sy * cp * cr - cy * sp * sr;
+
+      return q;
   }
 
   void publish_odometry()
@@ -168,6 +174,7 @@ private:
     odom_x_ += delta_x;
     odom_y_ += delta_y;
     odom_th_ += delta_th;
+    auto quat = quaternion_from_euler(0, 0, odom_th_);
 
     odom_msg_.header.stamp = odom_current_time_;
     odom_msg_.header.frame_id = "odom";
@@ -176,7 +183,10 @@ private:
     odom_msg_.pose.pose.position.x = odom_x_;
     odom_msg_.pose.pose.position.y = odom_y_;
     odom_msg_.pose.pose.position.z = 0.0;
-    odom_msg_.pose.pose.orientation = toQuaternion(0, 0, odom_th_);
+    odom_msg_.pose.pose.orientation.x = quat[1];
+    odom_msg_.pose.pose.orientation.y = quat[2];
+    odom_msg_.pose.pose.orientation.z = quat[3];
+    odom_msg_.pose.pose.orientation.w = quat[0];
 
     odom_msg_.twist.twist.linear.x = velX;
     odom_msg_.twist.twist.linear.y = velY;
@@ -196,7 +206,7 @@ private:
 
     if ((this->get_parameter("publish_odom_tf").as_bool()))
       odom_tf_broadcaster_->sendTransform(odom_trans);
-      
+
     odom_last_time_ = odom_current_time_.seconds();
   }
 
