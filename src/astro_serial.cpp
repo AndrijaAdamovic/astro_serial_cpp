@@ -138,7 +138,19 @@ private:
     current_publisher_->publish(current_msg);
   }
 
-  void publish_odometry(bool reset = false)
+  geometry_msgs::msg::Quaternion toQuaternion(double roll, double pitch, double yaw)
+  {
+      tf2::Quaternion q;
+      q.setRPY(roll, pitch, yaw);
+      geometry_msgs::msg::Quaternion quaternion_msg;
+      quaternion_msg.x = q.x();
+      quaternion_msg.y = q.y();
+      quaternion_msg.z = q.z();
+      quaternion_msg.w = q.w();
+      return quaternion_msg;
+  }
+
+  void publish_odometry()
   {
     odom_current_time_ = this->get_clock()->now().nanoseconds() / 1e9;
 
@@ -150,16 +162,13 @@ private:
     double velTh = ((this->get_parameter("wheel_radius").as_double()) / (this->get_parameter("wheel_separation").as_double())) * (wR - wL);
 
     double dt = odom_current_time_ - odom_last_time_;
-    double delta_x = (velX * cos(odom_th_)) * dt;
-    double delta_y = (velY * sin(odom_th_)) * dt;
+    double delta_x = (velX * std::cos(odom_th_)) * dt;
+    double delta_y = (velY * std::sin(odom_th_)) * dt;
     double delta_th = velTh * dt;
 
     odom_x_ += delta_x;
     odom_y_ += delta_y;
     odom_th_ += delta_th;
-    tf2::Quaternion q;
-    q.setRPY(0, 0, odom_th_);
-    q.normalize();
 
     odom_msg_.header.stamp = this->get_clock()->now();
     odom_msg_.header.frame_id = "odom";
@@ -168,7 +177,7 @@ private:
     odom_msg_.pose.pose.position.x = odom_x_;
     odom_msg_.pose.pose.position.y = odom_y_;
     odom_msg_.pose.pose.position.z = 0.0;
-    odom_msg_.pose.pose.orientation = tf2::toMsg(q);
+    odom_msg_.pose.pose.orientation = toQuaternion(0, 0, odom_th_);
 
     odom_msg_.twist.twist.linear.x = velX;
     odom_msg_.twist.twist.linear.y = velY;
@@ -184,7 +193,7 @@ private:
     odom_trans.transform.translation.x = odom_x_;
     odom_trans.transform.translation.y = odom_y_;
     odom_trans.transform.translation.z = 0.0;
-    odom_trans.transform.rotation = tf2::toMsg(q);
+    odom_trans.transform.rotation = toQuaternion(0, 0, odom_th_);
 
     if ((this->get_parameter("publish_odom_tf").as_bool()))
       odom_tf_broadcaster_->sendTransform(odom_trans);
