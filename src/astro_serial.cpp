@@ -52,6 +52,10 @@ public:
       rclcpp::shutdown();
     }
 
+    joint_states_msg_.header.frame_id = "base_link";
+
+    joint_states_msg_.name = {"left_wheel_joint", "right_wheel_joint"};
+
     joint_states_publisher_ = this->create_publisher<sensor_msgs::msg::JointState>("/joint_states", 10);
     current_publisher_ = this->create_publisher<std_msgs::msg::Float32>("/absoulte_current", 10);
 
@@ -119,23 +123,18 @@ private:
 
   void publish_joint_states()
   {
-    auto joint_states_msg = sensor_msgs::msg::JointState();
-    auto current_msg = std_msgs::msg::Float32();
 
-    joint_states_msg.header.frame_id = "base_link";
-    joint_states_msg.header.stamp = this->get_clock()->now();
+    joint_states_msg_.header.stamp = this->get_clock()->now();
 
-    joint_states_msg.name = {"left_wheel_joint", "right_wheel_joint"};
+    joint_states_msg_.position = {std::stod(raw_joint_states.at(0)), std::stod(raw_joint_states.at(1))};
+    joint_states_msg_.velocity = {std::stod(raw_joint_states.at(2)), std::stod(raw_joint_states.at(3))};
+    joint_states_msg_.effort = {std::stod(raw_joint_states.at(4)), std::stod(raw_joint_states.at(5))};
 
-    joint_states_msg.position = {std::stod(raw_joint_states.at(0)), std::stod(raw_joint_states.at(1))};
-    joint_states_msg.velocity = {std::stod(raw_joint_states.at(2)), std::stod(raw_joint_states.at(3))};
-    joint_states_msg.effort = {std::stod(raw_joint_states.at(4)), std::stod(raw_joint_states.at(5))};
+    joint_states_publisher_->publish(joint_states_msg_);
 
-    joint_states_publisher_->publish(joint_states_msg);
+    current_msg_.data = std::stof(raw_joint_states.at(6));
 
-    current_msg.data = std::stof(raw_joint_states.at(6));
-
-    current_publisher_->publish(current_msg);
+    current_publisher_->publish(current_msg_);
   }
 
   geometry_msgs::msg::Quaternion toQuaternion(double roll, double pitch, double yaw)
@@ -149,13 +148,13 @@ private:
       quaternion_msg.w = q.w();
       return quaternion_msg;
   }
-// 
+
   void publish_odometry()
   {
     auto odom_current_time_ = this->get_clock()->now();
 
-    double wL = std::stod(raw_joint_states.at(2));
-    double wR = std::stod(raw_joint_states.at(3));
+    double wL = joint_states_msg_.velocity.at(0);
+    double wR = joint_states_msg_.velocity.at(1);
 
     double velX = (this->get_parameter("wheel_radius").as_double() / 2) * (wL + wR);
     double velY = 0;
@@ -338,6 +337,8 @@ private:
   SerialPort serial_conn_;
 
   std::vector<std::string> raw_joint_states;
+  sensor_msgs::msg::JointState joint_states_msg_;
+  std_msgs::msg::Float32 current_msg_;
 
   nav_msgs::msg::Odometry odom_msg_;
   rclcpp::Time odom_last_time_;
