@@ -165,7 +165,7 @@ private:
     double velX = (this->get_parameter("wheel_radius").as_double() / 2) * (wL + wR);
     double velY = 0;
     double velTh = ((this->get_parameter("wheel_radius").as_double()) / (this->get_parameter("wheel_separation").as_double())) * (wR - wL);
-
+    RCLCPP_INFO(this->get_logger(), "Vel th %d", velTh);
     double dt = (odom_current_time_.seconds() - odom_last_time_);
     double delta_x = (velX * std::cos(odom_th_)) * dt;
     double delta_y = (velY * std::sin(odom_th_)) * dt;
