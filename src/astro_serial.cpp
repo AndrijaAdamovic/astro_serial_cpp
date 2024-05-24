@@ -165,7 +165,7 @@ private:
     double velX = (this->get_parameter("wheel_radius").as_double() / 2) * (wL + wR);
     double velY = 0;
     double velTh = ((this->get_parameter("wheel_radius").as_double()) / (this->get_parameter("wheel_separation").as_double())) * (wR - wL);
-    RCLCPP_INFO(this->get_logger(), "Vel th %f", velTh);
+
     double dt = (odom_current_time_.seconds() - odom_last_time_);
     double delta_x = (velX * std::cos(odom_th_)) * dt;
     double delta_y = (velY * std::sin(odom_th_)) * dt;
@@ -174,6 +174,7 @@ private:
     odom_x_ += delta_x;
     odom_y_ += delta_y;
     odom_th_ += delta_th;
+    RCLCPP_INFO(this->get_logger(), "Vel x%f y%f th%f Pos x%f y%f th%f", velX, velY, velTh, odom_x_, odom_y_, odom_th_);
     auto quat = quaternion_from_euler(0, 0, odom_th_);
 
     odom_msg_.header.stamp = odom_current_time_;
