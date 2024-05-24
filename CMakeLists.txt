@@ -21,9 +21,9 @@ find_package(tf2_geometry_msgs REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
-add_executable(astro_serial src/astro_serial.cpp)
+add_executable(astro_serial_node src/astro_serial.cpp)
 ament_target_dependencies(
-  astro_serial PUBLIC 
+  astro_serial_node PUBLIC 
   rclcpp
   sensor_msgs
   geometry_msgs
@@ -35,15 +35,15 @@ ament_target_dependencies(
   tf2_geometry_msgs
   )
 
-target_link_libraries(astro_serial PUBLIC serial)
+target_link_libraries(astro_serial_node PUBLIC serial)
 
-target_include_directories(astro_serial PUBLIC
+target_include_directories(astro_serial_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
-target_compile_features(astro_serial PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
+target_compile_features(astro_serial_node PUBLIC c_std_99 cxx_std_17)  # Require C99 and C++17
 
 install(TARGETS 
-  astro_serial
+  astro_serial_node
   DESTINATION lib/${PROJECT_NAME})
 
 if(BUILD_TESTING)
