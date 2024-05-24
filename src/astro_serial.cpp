@@ -152,7 +152,7 @@ private:
 // 
   void publish_odometry()
   {
-    odom_current_time_ = this->get_clock()->now().nanoseconds() / 1e9;
+    auto odom_current_time_ = this->get_clock()->now();
 
     double wL = std::stod(raw_joint_states.at(2));
     double wR = std::stod(raw_joint_states.at(3));
@@ -161,7 +161,7 @@ private:
     double velY = 0;
     double velTh = ((this->get_parameter("wheel_radius").as_double()) / (this->get_parameter("wheel_separation").as_double())) * (wR - wL);
 
-    double dt = odom_current_time_ - odom_last_time_;
+    double dt = (odom_current_time_ - odom_last_time_).seconds();
     double delta_x = (velX * std::cos(odom_th_)) * dt;
     double delta_y = (velY * std::sin(odom_th_)) * dt;
     double delta_th = velTh * dt;
@@ -170,7 +170,7 @@ private:
     odom_y_ += delta_y;
     odom_th_ += delta_th;
 
-    odom_msg_.header.stamp = this->get_clock()->now();
+    odom_msg_.header.stamp = odom_current_time_;
     odom_msg_.header.frame_id = "odom";
     odom_msg_.child_frame_id = "base_footprint";
 
@@ -186,18 +186,19 @@ private:
     odom_publisher_->publish(odom_msg_);
 
     geometry_msgs::msg::TransformStamped odom_trans;
-    odom_trans.header.stamp = this->get_clock()->now();
+    odom_trans.header.stamp = odom_current_time_;
     odom_trans.header.frame_id = "odom";
     odom_trans.child_frame_id = "base_footprint";
 
     odom_trans.transform.translation.x = odom_x_;
     odom_trans.transform.translation.y = odom_y_;
     odom_trans.transform.translation.z = 0.0;
-    odom_trans.transform.rotation = toQuaternion(0, 0, odom_th_);
+    odom_trans.transform.rotation = odom_msg_.pose.pose.orientation;
 
     if ((this->get_parameter("publish_odom_tf").as_bool()))
-      odom_tf_broadcaster_->sendTransform(odom_trans);
-
+    {
+      odom_tf_broadcaster_->sendTransform(odom_trans);toQuaternion(0, 0, odom_th_);
+    }
     odom_last_time_ = odom_current_time_;
   }
 
@@ -339,8 +340,7 @@ private:
   std::vector<std::string> raw_joint_states;
 
   nav_msgs::msg::Odometry odom_msg_;
-  double odom_current_time_;
-  double odom_last_time_;
+  rclcpp::Time odom_last_time_;
   double odom_x_, odom_y_, odom_th_;
 
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_publisher_;
