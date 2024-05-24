@@ -147,9 +147,9 @@ private:
 
     double velX = (this->get_parameter("wheel_radius").as_double() / 2) * (wL + wR);
     double velY = 0;
-    double velTh = (this->get_parameter("wheel_radius").as_double() / this->get_parameter("wheel_separation").as_double()) * (wR - wL);
+    double velTh = ((this->get_parameter("wheel_radius").as_double()) / (this->get_parameter("wheel_separation").as_double())) * (wR - wL);
 
-    double dt = reset ? 0 : odom_current_time_ - odom_last_time_;
+    double dt = odom_current_time_ - odom_last_time_;
     double delta_x = (velX * cos(odom_th_)) * dt;
     double delta_y = (velY * sin(odom_th_)) * dt;
     double delta_th = velTh * dt;
@@ -206,7 +206,7 @@ private:
       odom_x_ = 0;
       odom_y_ = 0;
       odom_th_ = 0;
-      publish_odometry(true);
+      publish_odometry();
     }
     catch (std::exception &e)
     {
