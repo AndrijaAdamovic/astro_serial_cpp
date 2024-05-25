@@ -332,7 +332,7 @@ private:
   {
     (void) request;
     RCLCPP_INFO(this->get_logger(), "Shutdown request received");
-    int result = std::system("sudo shutdown -h now");
+    int result = std::system("exit");
     if (result == 0)
     {
         response->success = true;
