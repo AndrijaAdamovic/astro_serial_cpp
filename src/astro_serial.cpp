@@ -63,6 +63,7 @@ public:
     odom_joint_states_timer_ = this->create_wall_timer(std::chrono::duration<double>((double)(1 / this->get_parameter("odom_joint_states_pub_freq").as_double())), std::bind(&AstroSerialNode::odom_joint_states_publish_callback, this));
 
     reset_odom_srv_ = this->create_service<std_srvs::srv::Trigger>("reset_odometry", std::bind(&AstroSerialNode::reset_odometry, this, std::placeholders::_1, std::placeholders::_2));
+    shutdown_host_srv_ = this->create_service<std_srvs::srv::Trigger>("shutdown_host", std::bind(&AstroSerialNode::shutdown_host, this, std::placeholders::_1, std::placeholders::_2));
 
     cmd_vel_subscriber_ = this->create_subscription<geometry_msgs::msg::Twist>("cmd_vel", 10, std::bind(&AstroSerialNode::cmd_vel_callback, this, std::placeholders::_1));
 
@@ -327,6 +328,23 @@ private:
     send_velocity(w);
   }
 
+  void shutdown_host(const std::shared_ptr<std_srvs::srv::Trigger::Request> request, std::shared_ptr<std_srvs::srv::Trigger::Response> response)
+  {
+    (void) request;
+    RCLCPP_INFO(this->get_logger(), "Shutdown request received");
+    int result = std::system("sudo shutdown -h now");
+    if (result == 0)
+    {
+        response->success = true;
+        response->message = "Shutdown command executed";
+    }
+    else
+    {
+        response->success = false;
+        response->message = "Error executing shutdown command";
+    }
+  }
+
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_states_publisher_;
   rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr current_publisher_;
   rclcpp::TimerBase::SharedPtr odom_joint_states_timer_;
@@ -346,6 +364,7 @@ private:
   std::unique_ptr<tf2_ros::TransformBroadcaster> odom_tf_broadcaster_;
 
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr reset_odom_srv_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr shutdown_host_srv_;
 
   std::thread uart_thread_;
   std::atomic<bool> uart_thread_running_;
