@@ -42,6 +42,10 @@ public:
     {
       serial_conn_.Open(this->get_parameter("serial_port").as_string());
       serial_conn_.SetBaudRate(convert_baud_rate(this->get_parameter("baud_rate").as_int()));
+      serial_conn_.SetCharacterSize(CharacterSize::CHAR_SIZE_8);
+      serial_conn_.SetFlowControl(FlowControl::FLOW_CONTROL_SOFTWARE);  // Software flow control
+      serial_conn_.SetParity(Parity::PARITY_NONE);
+      serial_conn_.SetStopBits(StopBits::STOP_BITS_1);
 
       uart_thread_ = std::thread(&AstroSerialNode::read_joint_states, this);
       RCLCPP_INFO(this->get_logger(), "UART Port opened succesfully");
