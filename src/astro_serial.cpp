@@ -310,19 +310,20 @@ private:
 
   void send_velocity(std::vector<double> w)
   {
-    // try
-    // {
+    try
+    {
       std::string velcity_command = "v " + std::to_string(w.at(0)) + " " + std::to_string(w.at(1)) + "\n";
       serial_conn_.Write(velcity_command);
-    // }
-    // catch (const NotOpen &)
-    // {
-    //   RCLCPP_ERROR(this->get_logger(), "UART port is not opened");
-    // }
-    // catch (const std::exception &e)
-    // {
-    //   RCLCPP_ERROR(this->get_logger(), "Error writing to UART: %s", e.what());
-    // }
+      serial_conn_.DrainWriteBuffer();
+    }
+    catch (const NotOpen &)
+    {
+      RCLCPP_ERROR(this->get_logger(), "UART port is not opened");
+    }
+    catch (const std::exception &e)
+    {
+      RCLCPP_ERROR(this->get_logger(), "Error writing to UART: %s", e.what());
+    }
   }
 
   void cmd_vel_callback(const geometry_msgs::msg::Twist &msg)
